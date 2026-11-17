@@ -1,19 +1,21 @@
 // Token launch radar (token-radar-01): the entrypoint the grader runs.
 //
-// Reads the sealed DefiLlama snapshot, builds the ranked board with the
-// model in lib/model.ts, and writes everything the gate and the judge
-// read into the output directory: board.json, the dashboard with its data
-// script, the screenshots, and dossier.json written by the vendored
-// make.fun library from the files as they land. The program is
-// deterministic: the same snapshot always writes the same bytes.
+// Reads the sealed snapshot, ranks the pre-token protocols with the model
+// in dashboard/model.js (the same file the dashboard page loads, so the
+// board and the page are one method, not two), and writes the output the
+// gate and the judge read: board.json, data.js, the dashboard, the
+// screenshots, and dossier.json from the vendored make.fun library. The
+// program is deterministic: the same snapshot always writes the same bytes.
 //
 //   node main.ts --input <snapshot.json|dir> --output <dir>
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output.
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { boardIssue, buildRadar, dataScript, parseSnapshot } from './lib/model.ts';
+import { boardIssue, dataScript, parseSnapshot } from './lib/model.ts';
+import { computeModel, farmPlan } from './dashboard/model.js';
 import { buildDossier } from './vendor/makefun-board.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -38,16 +40,27 @@ if (!existsSync(inputFile)) {
 const out = arg('output', process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
 const snapshot = parseSnapshot(readFileSync(inputFile, 'utf8'));
-const { board, radar } = buildRadar(snapshot);
+const { meta, rows, comps } = computeModel(snapshot.protocols, snapshot.as_of);
+const board = rows.map((r: any) => ({
+  slug: r.slug,
+  name: r.name,
+  rank: r.rank,
+  implied_value_usd: r.implied,
+  farm_steps: farmPlan(r, meta).steps,
+}));
 const issue = boardIssue(board, snapshot);
 if (issue !== null) {
   process.stderr.write(`token radar: the model wrote a board the gate refuses: ${issue}\n`);
   process.exit(1);
 }
 
+// A short fingerprint of the board, printed in the dashboard footer and the
+// screenshots, so the page, the images and board.json visibly agree.
+meta.boardHash = createHash('sha256').update(JSON.stringify(board)).digest('hex').slice(0, 12);
+
 mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'board.json'), `${JSON.stringify({ rows: board })}\n`);
-writeFileSync(join(out, 'data.js'), dataScript(radar));
+writeFileSync(join(out, 'data.js'), dataScript(meta, rows, comps, snapshot.watchlist));
 
 /** Copy a directory's regular files into the output, skipping names that start with a dot. */
 function copyFiles(from: string, to: string): void {
