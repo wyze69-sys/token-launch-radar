@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"></div>
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="tagline">Protocols that record no token yet, ranked by what a launch would be worth, with the steps to farm each one.</p>
+    </div>
+  </div>
+  <dl class="stats" id="stats"></dl>
+</header>
+
+<main>
+  <section id="board-view">
+    <div class="controls">
+      <label class="field grow">
+        <span>Search</span>
+        <input id="q" type="search" placeholder="Protocol name or slug">
+      </label>
+      <label class="field">
+        <span>Category</span>
+        <select id="cat"></select>
+      </label>
+      <label class="field">
+        <span>Chain</span>
+        <select id="chain"></select>
+      </label>
+      <label class="field">
+        <span>Min TVL</span>
+        <select id="min-tvl">
+          <option value="0">Any size</option>
+          <option value="10000000">$10M+</option>
+          <option value="50000000">$50M+</option>
+          <option value="250000000">$250M+</option>
+        </select>
+      </label>
+      <label class="check">
+        <input id="wl" type="checkbox">
+        <span>Watchlist only</span>
+      </label>
+    </div>
+
+    <div class="table-wrap">
+      <table id="board">
+        <thead>
+          <tr>
+            <th data-sort="rank" class="num">Rank</th>
+            <th data-sort="name">Protocol</th>
+            <th>Chains</th>
+            <th data-sort="tvl_usd" class="num">TVL</th>
+            <th data-sort="change_7d" class="num">7d change</th>
+            <th data-sort="age_days" class="num">Tracked</th>
+            <th data-sort="multiple" class="num">Multiple</th>
+            <th data-sort="implied_value_usd" class="num">Implied value</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="empty" id="empty" hidden>No protocol matches those filters. Loosen one and the radar sweeps again.</p>
+    </div>
+  </section>
+
+  <section id="detail-view" hidden></section>
+
+  <section class="method">
+    <h2>How the radar values a launch</h2>
+    <p id="model-text"></p>
+    <div class="method-grid">
+      <div>
+        <h3>The multiple is learned, not picked</h3>
+        <p>For every category, the radar takes the protocols in the snapshot whose token already trades, and uses the median of their market-cap-to-TVL ratios, shrunk toward the global median by the count behind it. A category with fewer than three traded tokens uses the global median instead: one protocol's ratio is an anecdote, not a market. A lending protocol is therefore valued the way the market values lending protocols, on this snapshot's own figures.</p>
+      </div>
+      <div>
+        <h3>Momentum and maturity adjust it</h3>
+        <p>A protocol whose TVL grew over the last seven days earns up to a 24% premium and one that shrank takes up to a 24% discount. A protocol tracked for years with no token earns up to a 10% maturity premium: it has had every chance to issue, so the launch it still owes is the more credible for the wait.</p>
+      </div>
+      <div>
+        <h3>What the board leaves out</h3>
+        <p>Protocols that already record a token, and wrapped, staked or bridged products of a token that trades, are not waiting on a launch of their own and never appear. An implied value is this radar's own claim about a launch that may never happen, not a prediction and not advice.</p>
+      </div>
+    </div>
+    <h3>Category multiples in this snapshot</h3>
+    <div id="multiples" class="multiples"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Built from one sealed DefiLlama snapshot; the page reads no network and every figure on it is computed by the entry's own program from that snapshot.</p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
